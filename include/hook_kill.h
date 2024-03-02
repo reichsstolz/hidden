@@ -1,3 +1,5 @@
+#include <linux/module.h>
+#include <linux/types.h>
 #ifdef MODULE
 extern struct module __this_module;
 #define THIS_MODULE (&__this_module)
