@@ -30,7 +30,7 @@ include_directories(
         ${KERNELHEADERS_DIR}/include
         ./include/*
 )
-add_library(dummy_target ./include/*)
+add_library(lib ./include/*)
 
 set(DRIVER_FILE hello.ko)
 set(KBUILD_CMD $(MAKE) -C ${KERNELHEADERS_DIR} modules M=${CMAKE_CURRENT_BINARY_DIR} src=${CMAKE_CURRENT_SOURCE_DIR})
