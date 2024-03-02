@@ -1,7 +1,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <hook_net.h> 
-#include <hook_kill.h>
+#include <include/hook_net.h> 
+#include <include/hook_kill.h>
 
 
 
