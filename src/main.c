@@ -16,7 +16,7 @@ int init_module() {
 
 void cleanup_module() {
   nf_unregister_net_hook(&init_net, &nfhook);
-  // remove_hook_kill()
+  //remove_hook_kill()
   printk(KERN_INFO "Stoping Rootkit\n");
 }
 

