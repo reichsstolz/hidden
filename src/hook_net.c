@@ -74,7 +74,7 @@ int register_net_hook(void) {
   dev = first_net_device(&init_net);
 
   while (dev) {
-    if (strncmp(dev->name, "ens33", 5) != 0) { // Change to choose interface
+    if (strncmp(dev->name, "eth0", 5) != 0) { // Change to choose interface
       dev = next_net_device(dev);
       continue;
     }

